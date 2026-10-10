@@ -1,0 +1,21 @@
+ticker,company,aliases,sector
+AAPL,Apple Inc.,Apple|Apple Inc|iPhone maker,Technology
+MSFT,Microsoft Corporation,Microsoft|Microsoft Corp,Technology
+NVDA,NVIDIA Corporation,NVIDIA|Nvidia,Semiconductors
+AMZN,Amazon.com Inc.,Amazon|Amazon.com,Consumer Discretionary
+GOOGL,Alphabet Inc.,Alphabet|Google,Communication Services
+META,Meta Platforms Inc.,Meta Platforms|Facebook|Instagram,Communication Services
+JPM,JPMorgan Chase & Co.,JPMorgan|JP Morgan|JPMorgan Chase,Financials
+XOM,Exxon Mobil Corporation,Exxon|ExxonMobil|Exxon Mobil,Energy
+JNJ,Johnson & Johnson,Johnson & Johnson|J&J,Healthcare
+WMT,Walmart Inc.,Walmart|Wal-Mart,Consumer Staples
+BAC,Bank of America Corp.,Bank of America|BofA,Financials
+GS,Goldman Sachs Group Inc.,Goldman Sachs|Goldman,Financials
+V,Visa Inc.,Visa,Financials
+MA,Mastercard Incorporated,Mastercard|MasterCard,Financials
+TSLA,Tesla Inc.,Tesla,Consumer Discretionary
+AMD,Advanced Micro Devices Inc.,Advanced Micro Devices|AMD,Semiconductors
+INTC,Intel Corporation,Intel,Semiconductors
+NFLX,Netflix Inc.,Netflix,Communication Services
+CRM,Salesforce Inc.,Salesforce,Technology
+ORCL,Oracle Corporation,Oracle,Technology

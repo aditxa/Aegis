@@ -1,0 +1,8 @@
+asset_id,name,asset_type,ticker,market_value,duration,convexity,spread_duration,beta,delta,gamma,vega,lgd,fx_exposure
+EQ_AAPL,Apple Equity,equity,AAPL,2500000,0,0,0,1.10,0,0,0,0,0
+EQ_JPM,JPMorgan Equity,equity,JPM,1800000,0,0,0,1.05,0,0,0,0,0
+BOND_IG,US Investment Grade Bond,bond,LQD,3000000,5.8,42,5.2,0,0,0,0,0,0
+BOND_HY,US High Yield Bond,bond,HYG,1700000,3.7,20,3.5,0,0,0,0,0,0
+LOAN_A,Synthetic Corporate Loan,loan,,2200000,0,0,3.0,0,0,0,0,0.45,0
+OPT_SPY,Synthetic SPY Option Book,derivative,SPY,900000,0,0,0,0,0.55,0.80,0.35,0,0
+CASH_EUR,EUR Cash Exposure,cash,,1000000,0,0,0,0,0,0,0,0,0.70

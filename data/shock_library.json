@@ -1,0 +1,114 @@
+{
+  "Geopolitical": {
+    "equity_pct": -0.1,
+    "rate_bps": -35,
+    "credit_spread_bps": 90,
+    "fx_pct": -0.035,
+    "vol_points": 12,
+    "default_prob_shift": 0.012
+  },
+  "Macroeconomic": {
+    "equity_pct": -0.075,
+    "rate_bps": 175,
+    "credit_spread_bps": 120,
+    "fx_pct": -0.02,
+    "vol_points": 10,
+    "default_prob_shift": 0.01
+  },
+  "Credit Event": {
+    "equity_pct": -0.14,
+    "rate_bps": -70,
+    "credit_spread_bps": 320,
+    "fx_pct": -0.03,
+    "vol_points": 18,
+    "default_prob_shift": 0.05
+  },
+  "Merger/Acquisition": {
+    "equity_pct": 0.025,
+    "rate_bps": 10,
+    "credit_spread_bps": -15,
+    "fx_pct": 0.0,
+    "vol_points": 3,
+    "default_prob_shift": -0.002
+  },
+  "Earnings": {
+    "equity_pct": -0.06,
+    "rate_bps": 5,
+    "credit_spread_bps": 45,
+    "fx_pct": 0.0,
+    "vol_points": 8,
+    "default_prob_shift": 0.004
+  },
+  "Regulatory/Legal": {
+    "equity_pct": -0.085,
+    "rate_bps": 0,
+    "credit_spread_bps": 70,
+    "fx_pct": 0.0,
+    "vol_points": 9,
+    "default_prob_shift": 0.006
+  },
+  "Cybersecurity": {
+    "equity_pct": -0.095,
+    "rate_bps": 0,
+    "credit_spread_bps": 80,
+    "fx_pct": 0.0,
+    "vol_points": 11,
+    "default_prob_shift": 0.008
+  },
+  "Supply Chain": {
+    "equity_pct": -0.07,
+    "rate_bps": 20,
+    "credit_spread_bps": 55,
+    "fx_pct": -0.01,
+    "vol_points": 7,
+    "default_prob_shift": 0.005
+  },
+  "Management/Governance": {
+    "equity_pct": -0.065,
+    "rate_bps": 0,
+    "credit_spread_bps": 65,
+    "fx_pct": 0.0,
+    "vol_points": 8,
+    "default_prob_shift": 0.006
+  },
+  "Operational Incident": {
+    "equity_pct": -0.08,
+    "rate_bps": 0,
+    "credit_spread_bps": 60,
+    "fx_pct": 0.0,
+    "vol_points": 9,
+    "default_prob_shift": 0.006
+  },
+  "Product Launch": {
+    "equity_pct": 0.035,
+    "rate_bps": 0,
+    "credit_spread_bps": -10,
+    "fx_pct": 0.0,
+    "vol_points": 4,
+    "default_prob_shift": -0.001
+  },
+  "Market/Trading": {
+    "equity_pct": -0.11,
+    "rate_bps": -25,
+    "credit_spread_bps": 105,
+    "fx_pct": -0.015,
+    "vol_points": 15,
+    "default_prob_shift": 0.009
+  },
+  "Other": {
+    "equity_pct": -0.035,
+    "rate_bps": 15,
+    "credit_spread_bps": 35,
+    "fx_pct": -0.005,
+    "vol_points": 5,
+    "default_prob_shift": 0.003
+  },
+  "Financing/Liquidity": {
+    "equity_pct": -0.12,
+    "rate_bps": -45,
+    "credit_spread_bps": 240,
+    "fx_pct": -0.02,
+    "vol_points": 16,
+    "default_prob_shift": 0.035
+  }
+}
