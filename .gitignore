@@ -1,33 +1,12 @@
-# Byte-compiled / optimized / DLL files
+.venv/
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Virtual environments
-.venv/
-venv/
-ENV/
-env/
-
-# Distribution / packaging
-build/
-dist/
-*.egg-info/
-
-# Unit test / coverage
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Environment and local configs
 .env
-
-# Generated outputs & database artifacts
-outputs/*
-!outputs/.gitkeep
+outputs/*.db
+outputs/*.json
 models/
-
-# OS generated
+*.egg-info/
+.pytest_cache/
 .DS_Store
 Thumbs.db
-

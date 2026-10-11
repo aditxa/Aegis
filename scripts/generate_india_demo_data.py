@@ -61,17 +61,23 @@ EVENTS = [
 ]
 
 
-def main(n: int = 420) -> None:
-    start = datetime(2026, 10, 1, 9, 15, tzinfo=IST)
-    end = datetime(2026, 10, 1, 15, 29, tzinfo=IST)
-    span = int((end - start).total_seconds())
+def main(n: int = 2400) -> None:
+    # 34 weekday sessions, not 2,400 fabricated events within one six-hour session.
+    from datetime import date
+    sessions=[]
+    d=date(2026,8,17)
+    while d <= date(2026,10,1):
+        if d.weekday()<5:sessions.append(d)
+        d+=timedelta(days=1)
+    # Weekends excluded; exchange-specific holidays are deliberately not simulated as an official calendar.
     rows = []
     for i in range(n):
         comp = RNG.choice(COMPANIES)
         event, variants = RNG.choice(EVENTS)
         tone, title_tpl, body_tpl = RNG.choice(variants)
         source, domain, quality = RNG.choices(SOURCES, weights=[26, 10, 18, 28, 18], k=1)[0]
-        ts = start + timedelta(seconds=RNG.randrange(max(1, span)))
+        day=RNG.choice(sessions)
+        ts=datetime(day.year,day.month,day.day,9,15,tzinfo=IST)+timedelta(seconds=RNG.randrange(375*60))
         company = comp["company"]
         # Use a familiar alias in some articles to exercise entity resolution.
         alias_pool = [a.strip() for a in comp.get("aliases", "").split("|") if a.strip()]

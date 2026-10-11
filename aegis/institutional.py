@@ -79,7 +79,7 @@ def execution_estimate(ticker: str, trade_value_inr: float, side: str = "BUY", h
     liq = liquidity_for(ticker)
     q = abs(float(trade_value_inr))
     adv_frac = q / max(liq.adv_inr, 1.0)
-    participation = min(1.0, adv_frac * (390.0 / max(5.0, float(horizon_minutes))))
+    participation = min(1.0, adv_frac * (375.0 / max(5.0, float(horizon_minutes))))
     sigma = liq.daily_vol
     # Square-root impact in decimal price terms. Coefficient deliberately conservative for demo TCA.
     impact_dec = 0.42 * sigma * math.sqrt(max(adv_frac, 0.0))
@@ -99,8 +99,13 @@ def execution_estimate(ticker: str, trade_value_inr: float, side: str = "BUY", h
         elif adv_frac > 0.05 or participation > 0.10:
             status, style = "REVIEW", "VWAP / POV"
         else:
-            status, style = "EXECUTABLE", "VWAP"
+            status, style = "MODEL PASS", "VWAP / review"
+    from aegis.institutional_plus import execution_gate
+    guard = execution_gate(q,liq.adv_inr,min(float(horizon_minutes),375),liq.participation_cap,depth_10bps_inr=liq.depth_10bps_inr)
+    if q>0 and guard["breaches"]:
+        status, style = "LIQUIDITY RISK", "REVIEW / STAGE"
     return {
+        "guardrail":guard,
         "ticker": ticker.upper(),
         "side": side.upper(),
         "trade_value_inr": q,
@@ -139,7 +144,7 @@ def synthetic_iv_surface(spot: float = 25000.0, seed: int = 17, stress: float = 
             smile = 0.33 * x * x
             left_tail = 0.055 * max(-x - 0.05, 0.0) ** 1.35
             short_stress = stress * 0.045 * math.exp(-d / 32.0) * (1.0 + 1.4 * max(-x, 0.0))
-            micro_noise = rng.normal(0, 0.0012)
+            micro_noise = rng.normal(0, 0.0000)
             iv = max(0.075, min(0.65, base + skew + smile + left_tail + short_stress + micro_noise))
             rows.append({
                 "tenor_days": int(d),
@@ -152,8 +157,10 @@ def synthetic_iv_surface(spot: float = 25000.0, seed: int = 17, stress: float = 
     return pd.DataFrame(rows)
 
 
-def synthetic_market_tape(tickers: Iterable[str], periods: int = 96, freq_minutes: int = 5, seed: int = 73) -> pd.DataFrame:
+def synthetic_market_tape(tickers: Iterable[str], periods: int = 75, freq_minutes: int = 5, seed: int = 73) -> pd.DataFrame:
     """High-density synthetic intraday tape with stress, liquidity and order-flow fields."""
+    if periods < 1 or freq_minutes < 1 or (periods-1)*freq_minutes >= 375:
+        raise ValueError("Demo tape must remain inside NSE-style 09:15–15:30 simulated cash session")
     tickers = [t.upper() for t in tickers]
     rng = np.random.default_rng(seed)
     start = datetime(2026, 10, 1, 9, 15, tzinfo=IST)

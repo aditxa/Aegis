@@ -20,8 +20,7 @@ class SampleConnector(SourceConnector):
             r = json.loads(line)
             text = f"{r.get('title','')} {r.get('text','')}"
             if query and query.lower() not in text.lower():
-                # Query filter is optional for sample mode; ticker/company search still works.
-                pass
+                continue
             dt = datetime.fromisoformat(r["published_at"].replace("Z", "+00:00"))
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)

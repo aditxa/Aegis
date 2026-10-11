@@ -17,6 +17,8 @@ except ImportError as e:
 from aegis.engine import AegisRiskEngine
 from aegis.ingest import SampleConnector
 from aegis.downstream import TacticalRebalancer, StressTester
+from aegis.institutional_plus import (surface_diagnostics, sequential_risk_monitor,
+    validated_portfolio, execution_gate)
 from aegis.institutional import (
     INDIA_LIQUIDITY,
     execution_estimate,
@@ -40,7 +42,7 @@ st.markdown(
         --amber:#f2b84b; --red:#ff6678; --blue:#74a7ff;
       }
       html, body, [class*="css"], [data-testid="stAppViewContainer"] {
-        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+        font-family: Arial, "Helvetica Neue", sans-serif !important;
       }
       [data-testid="stAppViewContainer"] { background: var(--bg); color:var(--text); }
       [data-testid="stHeader"] { background:rgba(7,16,23,.92); height:34px; }
@@ -85,7 +87,7 @@ st.markdown(
 PLOT = dict(
     paper_bgcolor="#071017",
     plot_bgcolor="#071017",
-    font=dict(family="Segoe UI, Arial", color="#93a4ae", size=10),
+    font=dict(family="Arial, Helvetica Neue", color="#93a4ae", size=10),
     margin=dict(l=35, r=15, t=30, b=35),
 )
 GRID = "#1a2a34"
@@ -133,7 +135,7 @@ def _priority_css(v: float) -> str:
 
 
 @st.cache_data(show_spinner=False)
-def load_signals(limit: int = 420) -> pd.DataFrame:
+def load_signals(limit: int = 2400) -> pd.DataFrame:
     engine = AegisRiskEngine(ROOT / "data" / "india_companies.csv", use_market_context=False)
     items = SampleConnector(ROOT / "data" / "india_sample_articles.jsonl").fetch(limit=limit)
     signals = engine.analyze(items)
@@ -151,7 +153,7 @@ def rebalance_payload() -> tuple[pd.DataFrame, pd.DataFrame]:
     engine = get_rebalance_engine()
     # Rehydrate state from the same dense demo feed once; cache prevents rerun on widgets.
     if not any(engine.recent.values()):
-        items = SampleConnector(ROOT / "data" / "india_sample_articles.jsonl").fetch(limit=420)
+        items = SampleConnector(ROOT / "data" / "india_sample_articles.jsonl").fetch(limit=2400)
         engine.analyze(items)
     current = {
         "RELIANCE":.14, "HDFCBANK":.13, "ICICIBANK":.115, "INFY":.10, "TCS":.095,
@@ -177,27 +179,38 @@ st.markdown(
     <div class="terminal-title"><div class="brandmark">A</div><div>
       <h1>AegisSignal X</h1>
       <div class="subline">Financial risk intelligence · event surveillance · liquidity-aware execution · portfolio stress</div>
-    </div><span class="status-chip demo">synthetic institutional demo</span><span class="status-chip">IST</span></div>
+    </div><span class="status-chip">IST</span></div>
     """,
     unsafe_allow_html=True,
 )
 
+# Market context is simulated from the same time-stamped tape, never presented as live NSE data.
+from_demo = synthetic_market_tape(list(INDIA_LIQUIDITY)[:14], periods=75)
+demo_by_time = from_demo.groupby('timestamp').agg({'return_bps':'mean','realized_vol_pct':'mean','liquidity_stress':'mean','spread_bps':'mean'}).sort_index()
+demo_index = 25000.0 * np.exp(demo_by_time['return_bps'].cumsum().to_numpy() / 1e4)
+demo_index_change = 100*(demo_index[-1]/demo_index[0]-1.0)
+demo_risk = float(demo_by_time.liquidity_stress.iloc[-1])
+demo_spread = float(from_demo.spread_bps.quantile(.95))
+demo_iv = synthetic_iv_surface().query('tenor_days == 30 and moneyness == 1.0').iv_pct.iloc[0]
+demo_max_dd = float(np.min(demo_index/np.maximum.accumulate(demo_index)-1)*100)
+demo_stamp = from_demo.timestamp.max().strftime('%d %b %Y, %H:%M IST')
 quotes = [
-    ("NIFTY 50", "25,186.40", "+0.34%", "up"),
-    ("BANK NIFTY", "54,912.75", "-0.21%", "down"),
-    ("INDIA VIX", "13.82", "+5.47%", "warn"),
-    ("USD/INR", "83.74", "+0.08%", "down"),
-    ("10Y G-SEC", "6.83%", "+2.1bp", "warn"),
-    ("NIFTY 1M ATM IV", "15.9%", "+0.7vol", "warn"),
-    ("PORTFOLIO AUM", "₹500 Cr", "NSE/BSE style", "cyan"),
-    ("RISK REGIME", "CAUTION", "liquidity normal", "warn"),
+    ('INDEX PROXY', f'{demo_index[-1]:,.2f}', f'{demo_index_change:+.2f}% simulated', 'up' if demo_index_change>=0 else 'down'),
+    ('SYNTH ATM IV', f'{demo_iv:.2f}%', '30-day simulated', 'warn'),
+    ('SYNTH RV', f'{demo_by_time.realized_vol_pct.iloc[-1]:.2f}%', 'realized-vol proxy', 'cyan'),
+    ('SYNTH SPREAD P95', f'{demo_spread:.1f} bp', '14 demo securities', 'warn'),
+    ('LIQUIDITY STRESS', f'{demo_risk:.2f}', 'unitless 0–1', 'warn'),
+    ('DEMO MAX DD', f'{demo_max_dd:+.2f}%', 'session drawdown', 'down'),
+    ('PORTFOLIO AUM', '₹500 Cr', 'synthetic multi-asset book', 'cyan'),
+    ('DATA AS OF', '01 OCT 2026', 'NOT LIVE · SIM', 'warn'),
 ]
+st.caption(f"Scenario clock: {demo_stamp} · Source: deterministic research simulation · Not a live exchange feed")
 st.markdown("<div class='market-strip'>" + "".join(
     f"<div class='quote'><div class='qname'>{n}</div><div class='qval'>{v}</div><div class='qchg {c}'>{d}</div></div>" for n,v,d,c in quotes
 ) + "</div>", unsafe_allow_html=True)
 
 with st.spinner("Building dense risk state…"):
-    df = load_signals(420)
+    df = load_signals(2400)
 
 if df.empty:
     st.error("No signals available.")
@@ -211,7 +224,7 @@ negative_share = float((df["sentiment_score"] < -0.10).mean() * 100)
 max_priority = float(df["risk_priority_score"].max())
 
 st.markdown("<div class='kpi-grid'>" + "".join([
-    kpi("Signals", f"{len(df):,}", "dense intraday feed"),
+    kpi("Signals", f"{len(df):,}", "multi-session simulated feed"),
     kpi("Elevated+", f"{elevated_count}", f"{critical_count} high/critical", "warn" if elevated_count else ""),
     kpi("Max impact", f"{df['impact_score'].max():.2f}/10", "conditional severity"),
     kpi("Max priority", f"{max_priority:.2f}/10", "evidence-gated urgency", "warn" if max_priority >= 5 else ""),
@@ -219,8 +232,8 @@ st.markdown("<div class='kpi-grid'>" + "".join([
     kpi("Sources", f"{df['source_domain'].nunique()}", latest.strftime("updated %H:%M:%S IST")),
 ]) + "</div>", unsafe_allow_html=True)
 
-risk_tab, exec_tab, vol_tab, stress_tab, health_tab = st.tabs([
-    "RISK MONITOR", "EXECUTION / REBALANCE", "VOLATILITY SURFACE", "STRESS LAB", "MODEL / DATA HEALTH"
+risk_tab, omega_tab, exec_tab, vol_tab, stress_tab, health_tab = st.tabs([
+    "RISK MONITOR", "EVIDENCE DECISION LAB", "EXECUTION / REBALANCE", "VOLATILITY SURFACE", "STRESS LAB", "MODEL / DATA HEALTH"
 ])
 
 # -----------------------------------------------------------------------------
@@ -270,8 +283,7 @@ with risk_tab:
         # Bring impact to a 0..1 scale for comparability.
         z[:,0] = (z[:,0] - 1.0) / 9.0
         fig = go.Figure(go.Heatmap(z=z, x=labels, y=hm.index.tolist(), zmin=0, zmax=1, colorscale="RdYlGn_r", colorbar=dict(title="risk", thickness=8)))
-        # fig.update_layout(**PLOT, height=430, margin=dict(l=70,r=20,t=10,b=35))
-        fig.update_layout(**{**PLOT, "margin": dict(l=70, r=20, t=10, b=35)}, height=430)
+        fig.update_layout(**{**PLOT, 'height': 430, 'margin': dict(l=70, r=20, t=10, b=35)})        
         fig.update_xaxes(side="top")
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar":False})
 
@@ -308,6 +320,7 @@ with exec_tab:
     gross_trade = float(exdf.trade_value_inr.abs().sum())
     est_cost = float(exdf.estimated_cost_inr.sum())
     at_risk = int(exdf.status.isin(["REVIEW", "LIQUIDITY RISK"]).sum())
+    if at_risk: st.warning(f"{at_risk} proposed trades require human liquidity review. Simulation is NOT an order-routing approval.")
     st.markdown("<div class='kpi-grid'>" + "".join([
         kpi("AUM", "₹500.0 Cr", "institutional demo book"),
         kpi("One-way turnover", f"{turnover*100:.2f}%", "optimizer constrained"),
@@ -331,13 +344,14 @@ with exec_tab:
         "Impact": exdf.impact_cost_bps,
         "All-in": exdf.all_in_cost_bps,
         "Cost ₹L": exdf.estimated_cost_inr / 1e5,
+        "POV breach": exdf.guardrail.apply(lambda g: "YES" if g["breaches"] else "NO"),
         "Sent": exdf.sentiment,
         "Risk": exdf.impact,
         "Status": exdf.status,
         "Style": exdf.execution_style,
     })
     def status_style(v):
-        return {"LIQUIDITY RISK":"background:#571c27;color:#ffabb5;font-weight:700", "REVIEW":"background:#443414;color:#ffd178;font-weight:700", "EXECUTABLE":"color:#63d6aa", "NO TRADE":"color:#71838f"}.get(str(v), "")
+        return {"LIQUIDITY RISK":"background:#571c27;color:#ffabb5;font-weight:700", "REVIEW":"background:#443414;color:#ffd178;font-weight:700", "MODEL PASS":"color:#63d6aa", "NO TRADE":"color:#71838f"}.get(str(v), "")
     ev = exec_view.style.map(status_style, subset=["Status"]).map(_sent_css, subset=["Sent"])
     st.dataframe(ev, hide_index=True, use_container_width=True, height=365, column_config={
         "Current": st.column_config.NumberColumn(format="%.2f%%"),
@@ -387,8 +401,14 @@ with vol_tab:
     stress_level = v1.slider("Risk shock", 0.0, 1.0, 0.35, 0.05, help="Synthetic event-to-IV stress bump")
     spot = v2.number_input("NIFTY spot", 15000.0, 40000.0, 25000.0, 50.0)
     view_mode = v3.selectbox("Surface view", ["3D IV surface", "2D heatmap"], index=0)
-    v4.metric("Synthetic 30D ATM IV", "15.9%", "+0.7 vol")
     surf = synthetic_iv_surface(spot=spot, stress=stress_level)
+    iv_atm = surf.loc[(surf.tenor_days==30)&(surf.moneyness==1.0),'iv_pct'].iloc[0]
+    v4.metric("Synthetic 30D ATM IV", f"{iv_atm:.2f}%", "scenario, not a market quote")
+    quality = surface_diagnostics(surf,spot)
+    if quality['passed_grid_checks']:
+        st.caption('Grid checks: no detected discrete butterfly, vertical or total-variance calendar violations · not a full no-arbitrage certification')
+    else:
+        st.warning(f"Surface quality check failed: {quality['butterfly_violations']} butterfly, {quality['vertical_violations']} vertical, {quality['calendar_total_variance_violations']} calendar warnings. Do not use for pricing.")
     pivot = surf.pivot(index="tenor_days", columns="strike", values="iv_pct")
     if view_mode == "3D IV surface":
         fig = go.Figure(data=[go.Surface(
@@ -441,6 +461,7 @@ with vol_tab:
 # -----------------------------------------------------------------------------
 with stress_tab:
     portfolio = pd.read_csv(ROOT / "data" / "india_portfolio.csv").fillna(0).to_dict("records")
+    validated_portfolio(portfolio,5_000_000_000)
     tester = StressTester(ROOT / "data" / "shock_library.json")
     q1,q2,q3 = st.columns([1.0,1.0,2.2])
     event = q1.selectbox("Scenario", sorted(tester.shocks.keys()), index=sorted(tester.shocks.keys()).index("Credit Event"))
@@ -491,7 +512,10 @@ with stress_tab:
 # Model / data health
 # -----------------------------------------------------------------------------
 with health_tab:
-    tape = synthetic_market_tape(list(INDIA_LIQUIDITY)[:14], periods=78)
+    tape = synthetic_market_tape(list(INDIA_LIQUIDITY)[:14], periods=75)
+    anomaly = sequential_risk_monitor(tape,window=20)
+    alarms = anomaly.loc[anomaly.warning == "ELEVATED"]
+    st.caption(f"Causal simulated anomaly monitor: {len(alarms)} alarms across {len(tape):,} rows; no predictive accuracy has been measured. Warmup/cooldown enforced.")
     c1,c2,c3,c4 = st.columns(4)
     c1.metric("Risk records", f"{len(df):,}")
     c2.metric("Market tape rows", f"{len(tape):,}")
@@ -518,3 +542,143 @@ with health_tab:
     <b>Production gaps intentionally exposed rather than hidden:</b> this demo has no licensed live NSE/BSE feed, no broker order-management connection, no real Level-2/3 depth, no live derivatives chain, no calibrated venue-specific transaction-cost model, no position/P&L reconciliation service, no entitlement layer, no kill-switch workflow, and no audited model-risk / change-control process. Those belong in the production integration layer rather than being faked in a hackathon UI.
     </div>
     """,unsafe_allow_html=True)
+
+
+# -----------------------------------------------------------------------------
+# Evidence decision lab. Real pipeline supports one-source abstention and a
+# deterministic multi-source attack/corroboration fixture for judged demos.
+# -----------------------------------------------------------------------------
+with omega_tab:
+    from scripts.omega_demo import build as omega_build
+    with st.spinner('Checking independent evidence, reversals and exposures…'):
+        omega=omega_build()
+    st.info('SYNTHETIC DECISION LAB — all stories, dates, weights and scenarios are educational fixtures. The source evidence score is NOT a measured probability of truth.')
+    cases={c['ticker']:c for c in omega['cases']}
+    sel=st.selectbox('Investigated risk hypothesis',list(cases),format_func=lambda s:f"{s} / {cases[s]['event_type']}",key='omega_case')
+    c=cases[sel];state=c['state']; dec=c['decision'];p=c['portfolio']
+    colors={'REVIEW_STRESS':'#ff7788','INVESTIGATE_CONFLICT':'#f4b45c','VERIFY_SOURCE':'#f4b45c',
+            'MONITOR':'#4bcbab','COLLECT_EVIDENCE':'#8698a4'}
+    tagcolor=colors.get(dec['action'],'#b3c6cf')
+    st.markdown(f"<div style='display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #28404e;padding:8px 0'><span style='font-size:15px;color:#dbe8ed;font-weight:700'>DECISION INTELLIGENCE | {sel}</span><span style='color:{tagcolor};border:1px solid {tagcolor};padding:5px 8px;font:12px Consolas,monospace'>{dec['action'].replace('_',' ')}</span></div>",unsafe_allow_html=True)
+    st.markdown("<div class='kpi-grid'>"+''.join([
+        kpi('Support index',f"{state['support_index']:.2f}",'heuristic / not calibrated'),
+        kpi('Opposition',f"{state['opposing_index']:.2f}",'contradictory independent sources'),
+        kpi('Independent support',str(state['independent_supporters']),'publisher groups'),
+        kpi('Copies suppressed',str(sum(x['syndicated_records']-1 for x in state['publishers'])),'syndications deduplicated'),
+        kpi('Scenario P&L',inr(p['conditional_pnl_inr']),f"{p['conditional_pnl_pct']:+.2f}% NAV; not a forecast",'down'),
+        kpi('Evidence fragility',f"{c['adversarial']['largest_publisher_dependence']:.2f}",'remove top publisher group'),
+    ])+'</div>',unsafe_allow_html=True)
+    l,r=st.columns([1.12,.88],gap='small')
+with l:
+    st.subheader('Provenance — independent evidence only')
+    ed = pd.DataFrame(state['publishers'])
+    st.dataframe(
+        ed[['publisher_group', 'stance', 'source', 'weight',
+            'syndicated_records', 'headline']],
+        hide_index=True,
+        use_container_width=True,
+        height=275,
+        column_config={
+            'weight': st.column_config.NumberColumn(
+                'Strength', format='%.2f'
+            )
+        }
+    )
+
+    st.subheader('Counterfactual: remove one publishing group')
+    vals = c['adversarial']['evidence_actions']
+    cf = pd.DataFrame(vals)
+
+    fig = go.Figure(go.Bar(
+        x=cf.delta_support,
+        y=cf.publisher_group,
+        orientation='h',
+        marker_color=[
+            '#ff7788' if x > 0 else '#4bcbab'
+            for x in cf.delta_support
+        ]
+    ))
+
+    fig.update_layout(**PLOT)
+    fig.update_layout(
+        height=225,
+        margin=dict(l=120, r=15, t=12, b=28),
+        xaxis=dict(
+            title='Change in support index',
+            gridcolor=GRID
+        ),
+        yaxis=dict(autorange='reversed')
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config={'displayModeBar': False}
+    )
+
+with r:
+    st.subheader('Exposure proxy network')
+    gr = c.get('diffusion')
+
+    if gr:
+        gl = pd.DataFrame(gr['propagated']).head(12).iloc[::-1]
+
+        fig = go.Figure(go.Bar(
+            x=gl.score,
+            y=gl.ticker,
+            orientation='h',
+            marker_color=[
+                '#ff7788' if d else '#638c9e'
+                for d in gl.direct
+            ]
+        ))
+
+        fig.update_layout(**PLOT)
+        fig.update_layout(
+            height=300,
+            margin=dict(l=90, r=10, t=8, b=30),
+            xaxis=dict(
+                title='Synthetic diffusion intensity',
+                gridcolor=GRID
+            )
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config={'displayModeBar': False}
+        )
+
+        st.caption(
+            'Network edges are synthetic sector-proxy relationships, '
+            'NOT established credit/supplier linkages.'
+        )
+
+    st.subheader('Asset-class contribution to conditional P&L')
+
+    fd = (
+        pd.DataFrame(p['assets'])
+        .groupby('asset_type', as_index=False)
+        .conditional_pnl.sum()
+        .sort_values('conditional_pnl')
+    )
+
+    fd['pnl_cr'] = fd.conditional_pnl / 1e7
+
+    st.dataframe(
+        fd[['asset_type', 'pnl_cr']],
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            'pnl_cr': st.column_config.NumberColumn(
+                '₹ crore', format='%+.2f'
+            )
+        }
+    )
+
+st.caption(
+    'ACTION POLICY · VERIFY_SOURCE / INVESTIGATE_CONFLICT means abstain. '
+    'REVIEW_STRESS means scenario assessment only; no routing. '
+    'Impact scores and downside scenarios are not calibrated '
+    'market return forecasts.'
+)

@@ -64,7 +64,7 @@ class AegisRiskEngine:
 
             domain = item.source_domain or domain_from_url(item.url)
             srcq = source_quality(item.source, domain)
-            if "source_quality" in item.metadata:
+            if item.metadata.get("synthetic_fixture") is True and "source_quality" in item.metadata:
                 try:
                     srcq = max(0.0, min(1.0, float(item.metadata["source_quality"])))
                 except (TypeError, ValueError):

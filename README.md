@@ -1,5 +1,40 @@
 # AegisSignal-X
 
+## v0.4 research-desk release (10 October 2026)
+
+**Primary deliverable:** `outputs/desk_snapshot.html` is a fully offline interactive, self-contained HTML trading-desk snapshot with embedded Plotly 3D synthetic IV surface; open directly in any recent web browser. The Streamlit dashboard remains available and now uses more honest simulated market header statistics and model/data-health displays.
+
+**IMPORTANT: No live NSE/BSE data, L2/L3 book, genuine option chain, actual portfolio positions or production crash prediction are included.** This is a reproducible 2,400-event synthetic India demonstrator, not a licensed trading signal product. The event-time labels for a statistical forecast have not been acquired; alert magnitudes are heuristics.
+
+New in v0.4:
+- Indian 375-minute cash-session aware execution estimation and conservative ADV, POV and displayed-depth review gates (`aegis/institutional_plus.py`); simulation is not broker executable.
+- Prior-observation-only rolling robust anomaly/CUSUM monitor, explicit warmup and no lookahead by prefix test.
+- Best bid/ask order-flow imbalance for supplied order-book observations; no real market feed included.
+- Discrete synthetic IV surface call monotonicity, butterfly convexity, calendar total variance checks; **not** arbitrage-free certification.
+- Content-bounded supplied-HTML financial table/number change detector (`aegis/ingest/structural_extract.py`), not an unauthorized scraping bot.
+- 2,400 deterministic synthetic events across several weekday sessions and 20 Indian tickers, a synthetic ₹500Cr reconciled book, performance-aware lightweight Arial desk UI, high-contrast warnings, correct units.
+- Sample query filter fixed, source-quality spoofing from ordinary manual content guarded, new institutional API endpoints.
+- Research references, original-vs-patent separation, critical review, future evaluation plan in `docs/INSTITUTIONAL_RESEARCH_AND_AUDIT_v04.md`.
+
+**Quick start (from this project folder):**
+
+```bash
+pip install -r requirements.txt
+pip install -e .
+python scripts/build_desk_snapshot.py
+# Open outputs/desk_snapshot.html in a browser
+python -m pytest -q
+# Optional: run Streamlit UI
+python -m streamlit run aegis/dashboard.py
+# Optional: run FastAPI server
+uvicorn aegis.api:app --reload --port 8000
+```
+
+Streamlit must be installed to launch the full dashboard and was **not** available for browser UI testing in the artifact-generation environment. Do not take the offline HTML as proof of Streamlit parity.
+
+---
+
+
 **Research-grade multi-source financial early-risk intelligence engine**
 
 AegisSignal-X turns real-time unstructured financial information into issuer-level, machine-readable risk signals and drives both downstream modules in the case study:
@@ -513,3 +548,19 @@ Also intentionally **not** included:
 - fake accuracy/backtest numbers.
 
 That restraint is a feature, not a missing component.
+
+---
+
+## NEW in v0.5: AegisSignal Ω Evidence Decision Lab
+
+This distribution extends v0.4; original pipelines, Module A and Module B remain intact. Ω is a deterministic research/prototype layer for **publisher-independent claim corroboration, contradicting stories, leak-free as-of replay, counterfactual publisher removal, synthetic portfolio loss attribution, bounded synthetic peer diffusion, risk abstention, matured-label-only historical analogue retrieval, and execution vetoes**.
+
+- Browser-ready, fully offline: open `outputs/Omega_Decision_Terminal_Offline.html` in a normal modern browser (WebGL shows 3D volatility geometry; SVG heatmap fallback if unsupported).
+- Interactive Streamlit: `streamlit run aegis/dashboard.py`, choose **EVIDENCE DECISION LAB**.
+- API: `uvicorn aegis.api:app --reload`, inspect `/docs` for `/omega/demo`, `/omega/assess`, and `/omega/analyze-text`.
+- Deterministic fixtures: `python scripts/omega_demo.py`.
+- Rebuild the offline browser: `python scripts/build_omega_terminal.py`.
+- Test all: `python -m pytest -q`.
+- Brutally critical study, mathematical derivations, patent references, real-data and judge demo plan: `docs/OMEGA_COMPETITIVE_RESEARCH_AND_CRITICAL_AUDIT.md`.
+
+**Do not present a synthetic scenario, sector-proxy edge or heuristic evidence index as a real market observation, true event probability, historical risk performance, or a trade recommendation.** Before deployment, lock down the client-supplied publisher group/source metadata, licenses and market data, and run prospective time-split validation.

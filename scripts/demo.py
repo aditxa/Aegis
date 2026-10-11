@@ -18,7 +18,7 @@ def main() -> None:
     out_dir = ROOT / "outputs"
     out_dir.mkdir(exist_ok=True)
     engine = AegisRiskEngine(ROOT / "data" / "india_companies.csv", use_market_context=False)
-    items = SampleConnector(ROOT / "data" / "india_sample_articles.jsonl").fetch(limit=420)
+    items = SampleConnector(ROOT / "data" / "india_sample_articles.jsonl").fetch(limit=2400)
     signals = engine.analyze(items)
     payload = [s.to_dict() for s in signals]
 
